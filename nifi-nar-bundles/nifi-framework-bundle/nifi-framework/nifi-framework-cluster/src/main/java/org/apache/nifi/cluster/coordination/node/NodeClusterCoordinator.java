@@ -839,7 +839,7 @@ public class NodeClusterCoordinator implements ClusterCoordinator, ProtocolHandl
         // about a node status from a different node, since those may be received out-of-order.
         final NodeConnectionStatus currentStatus = updateNodeStatus(nodeId, status);
         final NodeConnectionState currentState = currentStatus == null ? null : currentStatus.getState();
-        logger.info("Status of {} changed from {} to {}", nodeId, currentStatus, status);
+        logger.info("I made the change Status of {} changed from {} to {}", nodeId, currentStatus, status);
         logger.debug("State of cluster nodes is now {}", nodeStatuses);
 
         latestUpdateId.updateAndGet(curVal -> Math.max(curVal, status.getUpdateIdentifier()));
@@ -1059,6 +1059,10 @@ public class NodeClusterCoordinator implements ClusterCoordinator, ProtocolHandl
 
         final NodeConnectionStatus oldStatus = nodeStatuses.get(statusChangeMessage.getNodeId().getId());
 
+        if (oldStatus == null && updatedStatus.getState() == NodeConnectionState.DISCONNECTED ) {
+            // There is no need to tell that node is getting disconnected if there was no status earlier.
+            return;
+        }
         // Either remove the value from the map or update the map depending on the connection state
         if (statusChangeMessage.getNodeConnectionStatus().getState() == NodeConnectionState.REMOVED) {
             if (removeNodeConditionally(nodeId, oldStatus)) {
@@ -1068,7 +1072,7 @@ public class NodeClusterCoordinator implements ClusterCoordinator, ProtocolHandl
             updateNodeStatus(nodeId, updatedStatus);
         }
 
-        logger.info("Status of {} changed from {} to {}", statusChangeMessage.getNodeId(), oldStatus, updatedStatus);
+        logger.info("Yes I made the change, Status of {} changed from {} to {}", statusChangeMessage.getNodeId(), oldStatus, updatedStatus);
         logger.debug("State of cluster nodes is now {}", nodeStatuses);
 
         final NodeConnectionStatus status = statusChangeMessage.getNodeConnectionStatus();

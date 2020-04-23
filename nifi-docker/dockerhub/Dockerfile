@@ -22,7 +22,7 @@ LABEL site="https://nifi.apache.org"
 
 ARG UID=1000
 ARG GID=1000
-ARG NIFI_VERSION=1.12.0
+ARG NIFI_VERSION=1.11.4
 ARG BASE_URL=https://archive.apache.org/dist
 ARG MIRROR_BASE_URL=${MIRROR_BASE_URL:-${BASE_URL}}
 ARG NIFI_BINARY_PATH=${NIFI_BINARY_PATH:-/nifi/${NIFI_VERSION}/nifi-${NIFI_VERSION}-bin.zip}
@@ -57,11 +57,10 @@ RUN curl -fSL ${MIRROR_BASE_URL}/${NIFI_TOOLKIT_BINARY_PATH} -o ${NIFI_BASE_DIR}
     && ln -s ${NIFI_TOOLKIT_HOME} ${NIFI_BASE_DIR}/nifi-toolkit-${NIFI_VERSION}
 
 # Download, validate, and expand Apache NiFi binary.
-RUN curl -fSL ${MIRROR_BASE_URL}/${NIFI_BINARY_PATH} -o ${NIFI_BASE_DIR}/nifi-${NIFI_VERSION}-bin.zip \
-    && echo "$(curl ${BASE_URL}/${NIFI_BINARY_PATH}.sha256) *${NIFI_BASE_DIR}/nifi-${NIFI_VERSION}-bin.zip" | sha256sum -c - \
-    && unzip ${NIFI_BASE_DIR}/nifi-${NIFI_VERSION}-bin.zip -d ${NIFI_BASE_DIR} \
-    && rm ${NIFI_BASE_DIR}/nifi-${NIFI_VERSION}-bin.zip \
-    && mv ${NIFI_BASE_DIR}/nifi-${NIFI_VERSION} ${NIFI_HOME} \
+ADD nifi-1.12.0-SNAPSHOT-bin.zip ${NIFI_BASE_DIR}/nifi-1.12.0-SNAPSHOT-bin.zip
+RUN unzip ${NIFI_BASE_DIR}/nifi-1.12.0-SNAPSHOT-bin.zip -d ${NIFI_BASE_DIR} \
+    && rm ${NIFI_BASE_DIR}/nifi-1.12.0-SNAPSHOT-bin.zip \
+    && mv ${NIFI_BASE_DIR}/nifi-1.12.0-SNAPSHOT ${NIFI_HOME} \
     && mkdir -p ${NIFI_HOME}/conf \
     && mkdir -p ${NIFI_HOME}/database_repository \
     && mkdir -p ${NIFI_HOME}/flowfile_repository \
@@ -69,7 +68,7 @@ RUN curl -fSL ${MIRROR_BASE_URL}/${NIFI_BINARY_PATH} -o ${NIFI_BASE_DIR}/nifi-${
     && mkdir -p ${NIFI_HOME}/provenance_repository \
     && mkdir -p ${NIFI_HOME}/state \
     && mkdir -p ${NIFI_LOG_DIR} \
-    && ln -s ${NIFI_HOME} ${NIFI_BASE_DIR}/nifi-${NIFI_VERSION}
+    && ln -s ${NIFI_HOME} ${NIFI_BASE_DIR}/nifi-1.12.0-SNAPSHOT
 
 VOLUME ${NIFI_LOG_DIR} \
        ${NIFI_HOME}/conf \
