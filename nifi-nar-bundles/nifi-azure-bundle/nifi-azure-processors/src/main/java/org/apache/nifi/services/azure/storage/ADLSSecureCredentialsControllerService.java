@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.nifi.services.azure.storage;
 
 import org.apache.commons.lang3.StringUtils;
@@ -26,8 +27,8 @@ import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
-import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.azure.storage.utils.AzureStorageUtils;
+import org.apache.nifi.services.azure.keyvault.AzureKeyVaultConnectionService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,36 +41,22 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
- * Provides credentials details for ADLS
+ * Provides secure credentials details for ADLS
  *
  * @see AbstractControllerService
  */
-@Tags({"azure", "microsoft", "cloud", "storage", "adls", "credentials"})
+@Tags({"azure", "microsoft", "cloud", "storage", "adls", "credentials", "secure"})
 @CapabilityDescription("Defines credentials for ADLS processors.")
-public class ADLSCredentialsControllerService extends AbstractControllerService implements ADLSCredentialsService {
-
-    public static final PropertyDescriptor ACCOUNT_NAME = new PropertyDescriptor.Builder()
-        .fromPropertyDescriptor(AzureStorageUtils.ACCOUNT_NAME)
-        .description(AzureStorageUtils.ACCOUNT_NAME_BASE_DESCRIPTION)
-        .required(true)
-        .build();
-
-    public static final PropertyDescriptor USE_MANAGED_IDENTITY = new PropertyDescriptor.Builder()
-        .name("storage-use-managed-identity")
-        .displayName("Use Azure Managed Identity")
-        .description("Choose whether or not to use the managed identity of Azure VM/VMSS ")
-        .required(false)
-        .defaultValue("false")
-        .allowableValues("true", "false")
-        .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
-        .build();
+public class ADLSSecureCredentialsControllerService
+        extends AbstractControllerService
+        implements ADLSCredentialsService {
 
     private static final List<PropertyDescriptor> PROPERTIES = Collections.unmodifiableList(Arrays.asList(
-        ACCOUNT_NAME,
-        AzureStorageUtils.ADLS_ENDPOINT_SUFFIX,
-        AzureStorageUtils.ACCOUNT_KEY,
-        AzureStorageUtils.PROP_SAS_TOKEN,
-        USE_MANAGED_IDENTITY
+            AzureStorageUtils.KEYVAULT_CONNECTION_SERVICE,
+            AzureStorageUtils.ACCOUNT_NAME_SECRET,
+            AzureStorageUtils.ADLS_ENDPOINT_SUFFIX,
+            AzureStorageUtils.ACCOUNT_KEY_SECRET,
+            AzureStorageUtils.ACCOUNT_SAS_TOKEN_SECRET
     ));
 
     private ConfigurationContext context;
@@ -83,20 +70,20 @@ public class ADLSCredentialsControllerService extends AbstractControllerService 
     protected Collection<ValidationResult> customValidate(ValidationContext validationContext) {
         final List<ValidationResult> results = new ArrayList<>();
 
-        boolean accountKeySet = StringUtils.isNotBlank(validationContext.getProperty(AzureStorageUtils.ACCOUNT_KEY).getValue());
-        boolean sasTokenSet = StringUtils.isNotBlank(validationContext.getProperty(AzureStorageUtils.PROP_SAS_TOKEN).getValue());
-        boolean useManagedIdentitySet = validationContext.getProperty(USE_MANAGED_IDENTITY).asBoolean();
+        boolean accountKeySet = StringUtils.isNotBlank(validationContext.getProperty(
+                AzureStorageUtils.ACCOUNT_KEY_SECRET).getValue());
+        boolean sasTokenSet = StringUtils.isNotBlank(validationContext.getProperty(
+                AzureStorageUtils.ACCOUNT_SAS_TOKEN_SECRET).getValue());
 
-        if (!onlyOneSet(accountKeySet, sasTokenSet, useManagedIdentitySet)) {
+        if (!onlyOneSet(accountKeySet, sasTokenSet)) {
             StringJoiner options = new StringJoiner(", ")
-                .add(AzureStorageUtils.ACCOUNT_KEY.getDisplayName())
-                .add(AzureStorageUtils.PROP_SAS_TOKEN.getDisplayName())
-                .add(USE_MANAGED_IDENTITY.getDisplayName());
+                    .add(AzureStorageUtils.ACCOUNT_KEY_SECRET.getDisplayName())
+                    .add(AzureStorageUtils.ACCOUNT_SAS_TOKEN_SECRET.getDisplayName());
 
             results.add(new ValidationResult.Builder().subject(this.getClass().getSimpleName())
-                .valid(false)
-                .explanation("one and only one of [" + options + "] should be set")
-                .build());
+                    .valid(false)
+                    .explanation("one and only one of [" + options + "] should be set")
+                    .build());
         }
 
         return results;
@@ -104,8 +91,8 @@ public class ADLSCredentialsControllerService extends AbstractControllerService 
 
     private boolean onlyOneSet(Boolean... checks) {
         long nrOfSet = Arrays.stream(checks)
-            .filter(check -> check)
-            .count();
+                .filter(check -> check)
+                .count();
 
         return nrOfSet == 1;
     }
@@ -119,19 +106,45 @@ public class ADLSCredentialsControllerService extends AbstractControllerService 
     public ADLSCredentialsDetails getCredentialsDetails(Map<String, String> attributes) {
         ADLSCredentialsDetails.Builder credentialsBuilder = ADLSCredentialsDetails.Builder.newBuilder();
 
-        setValue(credentialsBuilder, ACCOUNT_NAME, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setAccountName);
-        setValue(credentialsBuilder, AzureStorageUtils.ACCOUNT_KEY, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setAccountKey);
-        setValue(credentialsBuilder, AzureStorageUtils.PROP_SAS_TOKEN, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setSasToken);
-        setValue(credentialsBuilder, AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setEndpointSuffix);
-        setValue(credentialsBuilder, USE_MANAGED_IDENTITY, PropertyValue::asBoolean, ADLSCredentialsDetails.Builder::setUseManagedIdentity);
+        setValue(credentialsBuilder,
+                AzureStorageUtils.ADLS_ENDPOINT_SUFFIX,
+                PropertyValue::getValue,
+                ADLSCredentialsDetails.Builder::setEndpointSuffix);
+
+        final AzureKeyVaultConnectionService keyVaultClientService = context.getProperty(
+                AzureStorageUtils.KEYVAULT_CONNECTION_SERVICE
+        ).asControllerService(AzureKeyVaultConnectionService.class);
+        String accountNameSecret = context.getProperty(
+                AzureStorageUtils.ACCOUNT_NAME_SECRET).getValue();
+        String accountKeySecret = context.getProperty(
+                AzureStorageUtils.ACCOUNT_KEY_SECRET).getValue();
+        String sasTokenSecret = context.getProperty(
+                AzureStorageUtils.ACCOUNT_SAS_TOKEN_SECRET).getValue();
+
+        if(StringUtils.isNotBlank(accountNameSecret)) {
+            credentialsBuilder.setAccountName(
+                    keyVaultClientService.getSecret(accountNameSecret));
+        }
+        if(StringUtils.isNotBlank(accountKeySecret)) {
+            credentialsBuilder.setAccountKey(
+                    keyVaultClientService.getSecret(accountKeySecret));
+        } else if(StringUtils.isNotBlank(sasTokenSecret)) {
+            credentialsBuilder.setSasToken(
+                    keyVaultClientService.getSecret(sasTokenSecret));
+        } else {
+            throw new IllegalArgumentException(String.format(
+                    "Either '%s' or '%s' must be defined.",
+                    AzureStorageUtils.ACCOUNT_KEY_SECRET.getDisplayName(),
+                    AzureStorageUtils.ACCOUNT_SAS_TOKEN_SECRET.getDisplayName()));
+        }
 
         return credentialsBuilder.build();
     }
 
     private <T> void setValue(
-        ADLSCredentialsDetails.Builder credentialsBuilder,
-        PropertyDescriptor propertyDescriptor, Function<PropertyValue, T> getPropertyValue,
-        BiConsumer<ADLSCredentialsDetails.Builder, T> setBuilderValue
+            ADLSCredentialsDetails.Builder credentialsBuilder,
+            PropertyDescriptor propertyDescriptor, Function<PropertyValue, T> getPropertyValue,
+            BiConsumer<ADLSCredentialsDetails.Builder, T> setBuilderValue
     ) {
         PropertyValue property = context.getProperty(propertyDescriptor);
 
@@ -141,3 +154,4 @@ public class ADLSCredentialsControllerService extends AbstractControllerService 
         }
     }
 }
+
