@@ -207,7 +207,7 @@ public class TestADLSCredentialsControllerService {
         configureAccountName();
         configureAccountKey();
 
-        runner.setProperty(credentialsService, ADLSCredentialsControllerService.ENDPOINT_SUFFIX, "");
+        runner.setProperty(credentialsService, AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, "");
         runner.assertNotValid(credentialsService);
     }
     @Test
@@ -215,7 +215,7 @@ public class TestADLSCredentialsControllerService {
         configureAccountName();
         configureAccountKey();
 
-        runner.setProperty(credentialsService, ADLSCredentialsControllerService.ENDPOINT_SUFFIX, " ");
+        runner.setProperty(credentialsService, AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, " ");
         runner.assertNotValid(credentialsService);
     }
 
@@ -422,7 +422,7 @@ public class TestADLSCredentialsControllerService {
     }
 
     private void configureEndpointSuffix() {
-        runner.setProperty(credentialsService, ADLSCredentialsControllerService.ENDPOINT_SUFFIX, END_POINT_SUFFIX_VALUE);
+        runner.setProperty(credentialsService, AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, END_POINT_SUFFIX_VALUE);
     }
 
     private void configureEndpointSuffixUsingEL() {
