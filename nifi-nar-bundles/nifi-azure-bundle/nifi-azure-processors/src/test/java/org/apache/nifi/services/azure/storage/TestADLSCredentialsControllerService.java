@@ -17,6 +17,7 @@
 package org.apache.nifi.services.azure.storage;
 
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.processors.azure.storage.utils.AzureStorageUtils;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.NoOpProcessor;
 import org.apache.nifi.util.TestRunner;
@@ -427,7 +428,7 @@ public class TestADLSCredentialsControllerService {
 
     private void configureEndpointSuffixUsingEL() {
         String variableName = "endpoint.suffix";
-        configurePropertyUsingEL(ADLSCredentialsControllerService.ENDPOINT_SUFFIX, variableName, END_POINT_SUFFIX_VALUE);
+        configurePropertyUsingEL(AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, variableName, END_POINT_SUFFIX_VALUE);
     }
 
     private void configureServicePrincipalTenantId() {
