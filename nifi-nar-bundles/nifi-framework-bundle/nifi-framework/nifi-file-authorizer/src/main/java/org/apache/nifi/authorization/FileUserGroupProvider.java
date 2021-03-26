@@ -108,8 +108,10 @@ public class FileUserGroupProvider implements ConfigurableUserGroupProvider {
     private static final String NAME_ATTR = "name";
 
     static final String PROP_INITIAL_USER_IDENTITY_PREFIX = "Initial User Identity ";
+    static final String PROP_INITIAL_GROUP_PREFIX = "Initial Group ";
     static final String PROP_TENANTS_FILE = "Users File";
     static final Pattern INITIAL_USER_IDENTITY_PATTERN = Pattern.compile(PROP_INITIAL_USER_IDENTITY_PREFIX + "\\S+");
+    static final Pattern INITIAL_GROUP_IDENTITY_PATTERN = Pattern.compile(PROP_INITIAL_GROUP_PREFIX + "\\S+");
 
     private Schema usersSchema;
     private Schema tenantsSchema;
@@ -118,6 +120,7 @@ public class FileUserGroupProvider implements ConfigurableUserGroupProvider {
     private File restoreTenantsFile;
     private String legacyAuthorizedUsersFile;
     private Set<String> initialUserIdentities;
+    private Set<String> initialGroupIdentities;
     private List<IdentityMapping> identityMappings;
     private List<IdentityMapping> groupMappings;
 
@@ -188,6 +191,15 @@ public class FileUserGroupProvider implements ConfigurableUserGroupProvider {
                 Matcher matcher = INITIAL_USER_IDENTITY_PATTERN.matcher(entry.getKey());
                 if (matcher.matches() && !StringUtils.isBlank(entry.getValue())) {
                     initialUserIdentities.add(IdentityMappingUtil.mapIdentity(entry.getValue(), identityMappings));
+                }
+            }
+
+            // extract any group identities
+            initialGroupIdentities = new HashSet<>();
+            for (Map.Entry<String,String> entry : configurationContext.getProperties().entrySet()) {
+                Matcher matcher = INITIAL_GROUP_IDENTITY_PATTERN.matcher(entry.getKey());
+                if (matcher.matches() && !StringUtils.isBlank(entry.getValue())) {
+                    initialGroupIdentities.add(IdentityMappingUtil.mapIdentity(entry.getValue(), identityMappings));
                 }
             }
 
@@ -736,6 +748,10 @@ public class FileUserGroupProvider implements ConfigurableUserGroupProvider {
     private void populateInitialUsers(final Tenants tenants) {
         for (String initialUserIdentity : initialUserIdentities) {
             getOrCreateUser(tenants, initialUserIdentity);
+        }
+
+        for (String initialGroupIdentity : initialGroupIdentities) {
+            getOrCreateGroup(tenants, initialGroupIdentity);
         }
     }
 
