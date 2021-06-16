@@ -55,16 +55,6 @@ public class ADLSCredentialsControllerService extends AbstractControllerService 
             .expressionLanguageSupported(ExpressionLanguageScope.NONE)
             .build();
 
-    public static final PropertyDescriptor ENDPOINT_SUFFIX = new PropertyDescriptor.Builder()
-            .fromPropertyDescriptor(AzureStorageUtils.ENDPOINT_SUFFIX)
-            .displayName("Endpoint Suffix")
-            .description("Storage accounts in public Azure always use a common FQDN suffix. " +
-                    "Override this endpoint suffix with a different suffix in certain circumstances (like Azure Stack or non-public Azure regions).")
-            .required(true)
-            .defaultValue("dfs.core.windows.net")
-            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
-            .build();
-
     public static final PropertyDescriptor ACCOUNT_KEY = new PropertyDescriptor.Builder()
             .fromPropertyDescriptor(AzureStorageUtils.ACCOUNT_KEY)
             .expressionLanguageSupported(ExpressionLanguageScope.NONE)
@@ -117,7 +107,7 @@ public class ADLSCredentialsControllerService extends AbstractControllerService 
 
     private static final List<PropertyDescriptor> PROPERTIES = Collections.unmodifiableList(Arrays.asList(
             ACCOUNT_NAME,
-            ENDPOINT_SUFFIX,
+            AzureStorageUtils.ADLS_ENDPOINT_SUFFIX,
             ACCOUNT_KEY,
             SAS_TOKEN,
             USE_MANAGED_IDENTITY,
@@ -197,7 +187,7 @@ public class ADLSCredentialsControllerService extends AbstractControllerService 
         setValue(credentialsBuilder, ACCOUNT_NAME, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setAccountName, attributes);
         setValue(credentialsBuilder, ACCOUNT_KEY, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setAccountKey, attributes);
         setValue(credentialsBuilder, SAS_TOKEN, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setSasToken, attributes);
-        setValue(credentialsBuilder, ENDPOINT_SUFFIX, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setEndpointSuffix, attributes);
+        setValue(credentialsBuilder, AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setEndpointSuffix, attributes);
         setValue(credentialsBuilder, USE_MANAGED_IDENTITY, PropertyValue::asBoolean, ADLSCredentialsDetails.Builder::setUseManagedIdentity, attributes);
         setValue(credentialsBuilder, SERVICE_PRINCIPAL_TENANT_ID, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setServicePrincipalTenantId, attributes);
         setValue(credentialsBuilder, SERVICE_PRINCIPAL_CLIENT_ID, PropertyValue::getValue, ADLSCredentialsDetails.Builder::setServicePrincipalClientId, attributes);

@@ -17,6 +17,7 @@
 package org.apache.nifi.services.azure.storage;
 
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.processors.azure.storage.utils.AzureStorageUtils;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.NoOpProcessor;
 import org.apache.nifi.util.TestRunner;
@@ -207,7 +208,7 @@ public class TestADLSCredentialsControllerService {
         configureAccountName();
         configureAccountKey();
 
-        runner.setProperty(credentialsService, ADLSCredentialsControllerService.ENDPOINT_SUFFIX, "");
+        runner.setProperty(credentialsService, AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, "");
         runner.assertNotValid(credentialsService);
     }
     @Test
@@ -215,7 +216,7 @@ public class TestADLSCredentialsControllerService {
         configureAccountName();
         configureAccountKey();
 
-        runner.setProperty(credentialsService, ADLSCredentialsControllerService.ENDPOINT_SUFFIX, " ");
+        runner.setProperty(credentialsService, AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, " ");
         runner.assertNotValid(credentialsService);
     }
 
@@ -422,12 +423,12 @@ public class TestADLSCredentialsControllerService {
     }
 
     private void configureEndpointSuffix() {
-        runner.setProperty(credentialsService, ADLSCredentialsControllerService.ENDPOINT_SUFFIX, END_POINT_SUFFIX_VALUE);
+        runner.setProperty(credentialsService, AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, END_POINT_SUFFIX_VALUE);
     }
 
     private void configureEndpointSuffixUsingEL() {
         String variableName = "endpoint.suffix";
-        configurePropertyUsingEL(ADLSCredentialsControllerService.ENDPOINT_SUFFIX, variableName, END_POINT_SUFFIX_VALUE);
+        configurePropertyUsingEL(AzureStorageUtils.ADLS_ENDPOINT_SUFFIX, variableName, END_POINT_SUFFIX_VALUE);
     }
 
     private void configureServicePrincipalTenantId() {
